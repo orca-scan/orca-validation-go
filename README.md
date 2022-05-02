@@ -75,8 +75,8 @@ func validationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// return success message with 200 status code
-	w.WriteHeader(http.StatusOK)
+	// return HTTP Status 204 (No Content)
+	w.WriteHeader(204)
 }
 ```
 
