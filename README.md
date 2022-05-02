@@ -36,9 +36,6 @@ curl --location --request POST 'http://127.0.0.1:3000/' \
 
 This [example](server.go) work as follows:
 
-### WebHook Out 
-
-[Orca Scan Barcode Data Validation](https://orcascan.com/guides/how-to-validate-barcode-scans-in-real-time-56928ff9)
 
 ```go
 func validationHandler(w http.ResponseWriter, r *http.Request) {
