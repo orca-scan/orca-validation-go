@@ -1,29 +1,54 @@
-# orca-webhook-go
+# orca-validation-go
 
-Example of how to build an [Orca Scan WebHook](https://orcascan.com/docs/api/webhooks) endpoint and [Orca Scan WebHook In](https://orcascan.com/guides/how-to-update-orca-scan-from-your-system-4b249706) in using [Go](https://go.dev/).
+Example of [how to validate barcode scans in real-time](https://orcascan.com/guides/how-to-validate-barcode-scans-in-real-time-56928ff9) in using [Go](https://go.dev/).
 
-## Install & Run
+## Install
 
 First ensure you have [Go](https://go.dev/) installed. If not, follow [this guide](https://go.dev/doc/install).
+
+```bash
+# should return 1.13 or higher
+go version
+```
+
+Then execute the following:
+
+```bash
+# download this example code
+git clone https://github.com/orca-scan/orca-validation-go.git
+
+# go into the new directory
+cd orca-validation-go
+
+# install dependencies
+go get -d ./...
+```
+
+If you get an error from this command like "`go.mod file not found in current directory or any parent directory.`", enter the following command, then try again:
+```bash
+go env -w GO111MODULE=auto
+```
+
+## Run
 
 ```bash
 # start the project
 go run server.go
 ```
 
-Your WebHook receiver will now be running on port 3000.
+Your server will now be running on port 3000.
 
-You can emulate an Orca Scan WebHook using [cURL](https://dev.to/ibmdeveloper/what-is-curl-and-why-is-it-all-over-api-docs-9mh) by running the following:
+You can emulate an Orca Scan Validation input using [cURL](https://dev.to/ibmdeveloper/what-is-curl-and-why-is-it-all-over-api-docs-9mh) by running the following:
 
 ```bash
-curl --location --request POST 'http://127.0.0.1:3000/' \
+curl --location --request POST 'http://localhost:3000/' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "___orca_sheet_name": "Vehicle Checks",
     "___orca_user_email": "hidden@requires.https",
     "Barcode": "orca-scan-test",
     "Date": "2022-04-19T16:45:02.851Z",
-    "Name": Orca Scan Validation Example,
+    "Name": "Orca Scan Validation"
 }'
 ```
 
