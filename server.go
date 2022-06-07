@@ -35,7 +35,7 @@ func validationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    // dubug purpose: show in console raw data received
+    // debug purpose: show in console raw data received
 	fmt.Println(barcode)
 
 	// NOTE:
