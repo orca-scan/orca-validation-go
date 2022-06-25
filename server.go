@@ -35,7 +35,7 @@ func validationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    // dubug purpose: show in console raw data received
+    // debug purpose: show in console raw data received
 	fmt.Println(barcode)
 
 	// NOTE:
@@ -53,8 +53,8 @@ func validationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// return HTTP Status 204 (No Content)
-	w.WriteHeader(204)
+	// return HTTP Status 200 with no body
+	w.Write([]byte(""))
 }
 
 func main() {
