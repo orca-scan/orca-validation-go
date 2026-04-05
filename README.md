@@ -1,134 +1,131 @@
 # orca-validation-go
 
-Example of [how to validate barcode scans in real-time](https://orcascan.com/guides/how-to-validate-barcode-scans-in-real-time-56928ff9) in using [Go](https://go.dev/).
+This is a working example of how to build a [Validation URL](https://orcascan.com/guides/barcode-scan-validation-webhook-56928ff9) for [Orca Scan](https://orcascan.com/) using Go.
 
-## Install
+## Why?
 
-First ensure you have [Go](https://go.dev/) installed. If not, follow [this guide](https://go.dev/doc/install).
+When someone scans a barcode in the Orca Scan app, you might want to check the data before it gets saved. A Validation URL lets you:
 
-```bash
-# should return 1.13 or higher
-go version
-```
+- **Reject bad data** - block a scan if a value is missing, out of range, or a duplicate
+- **Modify data** - auto-format, trim, or fill in fields before saving
+- **Guide the user** - show a success, warning, or error message right in the app
 
-Then execute the following:
+The app sends the scan data to your server, your server checks it, and tells Orca Scan whether to save, change, or reject the data - and can show messages to guide the user through the process.
 
-```bash
-# download this example code
-git clone https://github.com/orca-scan/orca-validation-go.git
+## How it works
 
-# go into the new directory
-cd orca-validation-go
+When a user scans a barcode or edits a field, Orca Scan sends a POST request to your server with the full row data:
 
-# install dependencies
-go get -d ./...
-```
-
-If you get an error from this command like "`go.mod file not found in current directory or any parent directory.`", enter the following command, then try again:
-```bash
-go env -w GO111MODULE=auto
-```
-
-## Run
-
-```bash
-# start the project
-go run server.go
-```
-
-Your server will now be running on port 3000.
-
-You can emulate an Orca Scan Validation input using [cURL](https://dev.to/ibmdeveloper/what-is-curl-and-why-is-it-all-over-api-docs-9mh) by running the following:
-
-```bash
-curl --location --request POST 'http://localhost:3000/' \
---header 'Content-Type: application/json' \
---data-raw '{
+```json
+{
     "___orca_sheet_name": "Vehicle Checks",
-    "___orca_user_email": "hidden@requires.https",
+    "___orca_user_email": "user@example.com",
+    "___orca_row_id": "abc123",
     "Barcode": "orca-scan-test",
-    "Date": "2022-04-19T16:45:02.851Z",
-    "Name": "Orca Scan Validation"
-}'
-```
-
-### Important things to note
-
-1. Only Orca Scan system fields start with `___`
-2. Properties in the JSON payload are an exact match to the  field names in your sheet _(case and space)_
-
-## How this example works
-
-This [example](server.go) work as follows:
-
-
-```go
-func validationHandler(w http.ResponseWriter, r *http.Request) {
-	// Read body
-	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		fmt.Println(err)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	// Parse JSON data
-	var barcode OrcaBarcode
-	jsonErr := json.Unmarshal([]byte(body), &barcode)
-	if jsonErr != nil {
-		fmt.Println(jsonErr)
-		http.Error(w, jsonErr.Error(), 500)
-		return
-	}
-
-    // debug purpose: show in console raw data received
-	fmt.Println(barcode)
-
-	// NOTE:
-	// orca system fields start with ___
-	// you can access the value of each field using the field name (data.Name, data.Barcode, data.Location)
-	name := barcode.Name
-
-	// validation example
-	if(len(name) > 20){
-		// return error message with json format
-		w.Write([]byte(`{
-			"title": "Invalid Name",
-			"message": "Name must be less than 20 characters"}
-			`))
-		return
-	}
-
-	// return HTTP Status 200 with no body
-	w.Write([]byte(""))
+    "Name": "Orca Scan"
 }
 ```
 
-## Test server locally on Orca Cloud
+Fields starting with `___` are Orca system fields that describe the context of the scan. Everything else matches your sheet column names exactly (case and spaces matter).
 
-To expose the server securely from localhost and test it easily on the real Orca Cloud environment you can use [Secure Tunnels](https://ngrok.com/docs/secure-tunnels#what-are-ngrok-secure-tunnels). Take a look at [Ngrok](https://ngrok.com/) or [Cloudflare](https://www.cloudflare.com/).
+Your server responds to tell Orca Scan what to do:
 
-```bash
-ngrok http 3000
+| Response                          | What happens                                                 |
+| :-------------------------------- | :----------------------------------------------------------- |
+| HTTP `204`                        | Allow - data saves as-is                                     |
+| HTTP `200` with fields            | Modify - Orca Scan updates the fields you return, then saves |
+| HTTP `400` with `___orca_message` | Reject - user sees an error and the save is blocked          |
+
+### In-app messages
+
+You can show messages in the app by including `___orca_message` in your response:
+
+```json
+{
+    "___orca_message": {
+        "display": "notification",
+        "type": "success",
+        "message": "Item verified"
+    }
+}
 ```
 
-## Troubleshooting
+| Property  | Options          | Effect                             |
+| :-------- | :--------------- | :--------------------------------- |
+| `display` | `"notification"` | Brief banner at the top of the app |
+|           | `"dialog"`       | Popup the user must dismiss        |
+| `type`    | `"success"`      | Green                              |
+|           | `"warning"`      | Yellow                             |
+|           | `"error"`        | Red                                |
 
-If you run into any issues not listed here, please [open a ticket](https://github.com/orca-scan/orca-validation-go/issues).
+> Your server must respond within 750ms or Orca Scan will ignore the response.
 
-## Examples in other langauges
-* [orca-validation-dotnet](https://github.com/orca-scan/orca-validation-dotnet)
-* [orca-validation-python](https://github.com/orca-scan/orca-validation-python)
-* [orca-validation-go](https://github.com/orca-scan/orca-validation-go)
-* [orca-validation-java](https://github.com/orca-scan/orca-validation-java)
-* [orca-validation-php](https://github.com/orca-scan/orca-validation-php)
-* [orca-validation-node](https://github.com/orca-scan/orca-validation-node)
+See [server.go](server.go) for working examples of all three response types, plus in-app notifications and secret verification.
 
-## History
+## Getting started
 
-For change-log, check [releases](https://github.com/orca-scan/orca-validation-python/releases).
+You'll need [Go](https://go.dev/) 1.21+ installed (`go version` to check) and an [Orca Scan](https://orcascan.com/) account.
+
+```bash
+git clone https://github.com/orca-scan/orca-validation-go.git
+cd orca-validation-go
+go run server.go
+```
+
+Your server is now running at `http://localhost:8888`.
+
+## Try it
+
+Use [cURL](https://curl.se/) to send a test request from your terminal (just like Orca Scan would):
+
+```bash
+curl -X POST http://localhost:8888 \
+  -H 'Content-Type: application/json' \
+  -H 'orca-sheet-name: Vehicle Checks' \
+  -H 'orca-secret: your-secret-here' \
+  -d '{
+    "___orca_sheet_name": "Vehicle Checks",
+    "___orca_user_email": "user@example.com",
+    "___orca_row_id": "abc123",
+    "Barcode": "orca-scan-test",
+    "Name": "Orca Scan"
+  }'
+```
+
+- `Name` is 9 characters, which is under 20 - you should get an empty `HTTP 204` response (data allowed)
+- Change `"Name"` to something longer than 20 characters and you should get `HTTP 400` with an error message (data rejected)
+
+## Connect to Orca Scan
+
+Orca Scan needs to reach your server over the internet. During development, [localtunnel](https://github.com/localtunnel/localtunnel) creates a temporary public URL that points to your machine:
+
+```bash
+npx localtunnel --port 8888
+```
+
+Copy the URL it gives you and paste it in Orca Scan under **Integrations > Events API > Validation URL**.
+
+When you're ready to go live, deploy to any Go host and update the URL.
+
+## Security
+
+Set a secret in Orca Scan (Integrations > Events API > Secret) and Orca Scan will send it as an `orca-secret` header with every request. Verify it on your server to make sure the request is genuine. See the commented example in [server.go](server.go).
+
+## Help
+
+[Chat to us live](https://orcascan.com/#chat) if you run into any issues.
+
+## Examples in other languages
+
+| Language | Repository                                                                    |
+| :------- | :---------------------------------------------------------------------------- |
+| C#       | [orca-validation-dotnet](https://github.com/orca-scan/orca-validation-dotnet) |
+| Python   | [orca-validation-python](https://github.com/orca-scan/orca-validation-python) |
+| Go       | [orca-validation-go](https://github.com/orca-scan/orca-validation-go)         |
+| Java     | [orca-validation-java](https://github.com/orca-scan/orca-validation-java)     |
+| PHP      | [orca-validation-php](https://github.com/orca-scan/orca-validation-php)       |
+| Node.js  | [orca-validation-node](https://github.com/orca-scan/orca-validation-node)     |
 
 ## License
 
-&copy; Orca Scan, the [Barcode Scanner app for iOS and Android](https://orcascan.com).
+&copy; Orca Scan, the [Barcode Scanner app for iOS and Android](https://orcascan.com)
